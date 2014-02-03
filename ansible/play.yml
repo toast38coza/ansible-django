@@ -1,0 +1,29 @@
+---
+- hosts: djangoservers
+  remote_user: root
+  tasks:
+    - name: update apt cache 
+      apt: update_cache=yes cache_valid_time=3600      
+      
+    - name: "Install the basics"
+      action: apt pkg=$item state=installed
+      with_items:
+        - build-essential
+        - python-software-properties
+        - python
+        - curl
+        - python-lxml
+        - libxml2-dev
+        - libxslt1-dev
+        - libjpeg-dev
+        - libfreetype6
+        - libfreetype6-dev
+        - zlib1g-dev
+        - sqlite
+        - git
+
+    - name: install nginx
+      apt: pkg=nginx state=present
+
+    - name: start nginx every bootup
+      service: name=nginx state=started enabled=yes

@@ -1,0 +1,10 @@
+---
+- hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: Delete Droplet
+      digital_ocean: >
+        client_id=8b2b0bebd03082078c885476d5a7935f
+        api_key=c06be0ad8e1e68602333e1ba4977e9c3
+        id=1080059
+        state="deleted"        

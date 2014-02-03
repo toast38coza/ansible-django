@@ -1,0 +1,5 @@
+[localhost]
+localhost ansible_connection=local
+
+[djangoservers]
+162.243.144.106
