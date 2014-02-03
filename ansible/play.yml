@@ -1,12 +1,15 @@
 ---
 - hosts: djangoservers
+  vars: 
+    project_name: django-polls-tutorial
+    project_repo: git@github.com:toast38coza/django-polls-tutorial.git
   remote_user: root
   tasks:
     - name: update apt cache 
       apt: update_cache=yes cache_valid_time=3600      
       
     - name: "Install the basics"
-      action: apt pkg=$item state=installed
+      action: apt pkg={{item}} state=installed
       with_items:
         - build-essential
         - python-software-properties
@@ -21,9 +24,31 @@
         - zlib1g-dev
         - sqlite
         - git
+        - python-psycopg2
+        - postgresql
+        - postgresql-server-dev-all
+        - python-dev
+        - python-setuptools
+        
 
-    - name: install nginx
+    - name: Install required Python packages.
+      easy_install: name={{item}}
+      with_items:
+        - pip
+        - virtualenv
+
+    - name: Install Nginx
       apt: pkg=nginx state=present
 
-    - name: start nginx every bootup
+    - name: Start Nginx every bootup
       service: name=nginx state=started enabled=yes
+
+    - name: "Create required directories (www, venvs and log files)"
+      file: path={{item}} state=directory
+      with_items:
+        - /var/www/
+        - /srv/venvs/
+
+    - name: "Checkout app"
+      git: repo=${project_repo} dest=/var/www/ version=master
+    
