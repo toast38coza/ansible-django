@@ -1,8 +1,11 @@
 ---
 - hosts: djangoservers
   vars: 
-    project_name: django-polls-tutorial
-    project_repo: git@github.com:toast38coza/django-polls-tutorial.git
+    server_name: polls.tangentdirect.info
+    http_port: 8001
+    project_name: mysite
+    project_repo_name: django-polls-tutorial
+    project_repo: git@github.com:toast38coza/django-polls-tutorial.git    
   remote_user: root
   tasks:
     - name: update apt cache 
@@ -22,7 +25,7 @@
         - libfreetype6
         - libfreetype6-dev
         - zlib1g-dev
-        - sqlite
+        - sqlite3
         - git
         - python-psycopg2
         - postgresql
@@ -31,7 +34,7 @@
         - python-setuptools
         
 
-    - name: Install required Python packages.
+    - name: Install required Python packages (easy_install).
       easy_install: name={{item}}
       with_items:
         - pip
@@ -43,12 +46,58 @@
     - name: Start Nginx every bootup
       service: name=nginx state=started enabled=yes
 
+    - name: Install nginx server_block.
+      template: src=templates/server_block dest=/etc/nginx/sites-enabled/{{project_name}}
+      notify: restart nginx
+
+    - name: Install Supervisor
+      apt: pkg=supervisor state=present
+
+    - name: Start Supervisor every bootup
+      service: name=supervisor state=started enabled=yes
+
+    - name: Add supervisor program.
+      template: src=templates/supervisor.conf dest=/etc/supervisor/conf.d/{{project_name}}.conf     
+
     - name: "Create required directories (www, venvs and log files)"
       file: path={{item}} state=directory
       with_items:
         - /var/www/
         - /srv/venvs/
+        - /var/log/nginx/{{project_name}}
+        - /var/log/gunicorn/
+        - /var/log/supervisor/
+
+    - name: Upload SSH key.
+      copy: src=~/.ssh/id_rsa dest=~/.ssh/id_rsa mode=0600
 
     - name: "Checkout app"
-      git: repo=${project_repo} dest=/var/www/ version=master
+      git: repo={{project_repo}} dest=/var/www/{{project_repo_name}} version=master
+
+    - name: Install requirements into virtualenv.
+      pip: requirements=/var/www/{{project_repo_name}}/{{project_name}}/requirements.txt virtualenv=/srv/venvs/{{project_name}}
+
+    - name: Add gunicorn to virtualenv.
+      pip: name={{item}} virtualenv=/srv/venvs/{{project_name}}
+      with_items:
+        - gunicorn
+
+    - name: Run Tests
+      django_manage: command=test app_path=/var/www/{{project_repo_name}}/{{project_name}} virtualenv=/srv/venvs/{{project_name}}
+
+    - name: Syncdb
+      django_manage: command=syncdb app_path=/var/www/{{project_repo_name}}/{{project_name}} virtualenv=/srv/venvs/{{project_name}}
+
+    - name: "Restarting {{project_name}}"
+      notify: restart project
+
+  handlers:
+    - name: restart nginx
+      service: name=nginx state=restarted
+      sudo_user: root
+    - name: restart project
+      supervisorctl: name={{project_name}} state=restarted
+      sudo_user: root
+
+
     

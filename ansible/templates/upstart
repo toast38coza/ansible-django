@@ -1,0 +1,11 @@
+description "manage app {{app_name}}"
+
+start on net-device-up
+stop on shutdown
+
+respawn
+
+chdir /var/www/{{repo_name}}/{{app_name}}/
+exec /srv/venvs/{{app_name}}/bin/gunicorn -b 0.0.0.0:{{port}} {{app_name}}.wsgi
+
+
